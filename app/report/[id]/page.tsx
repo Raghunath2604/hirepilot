@@ -49,7 +49,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         <div className="chips">{analysis.atsKeywords.map(item => <span className="chip" key={item.keyword}>{item.keyword} • {item.importance}</span>)}</div>
         <div className="grid-2 section">
           <div><h3>Matched skills</h3><div className="chips">{analysis.matchedSkills.map(item => <span className="chip" key={item}>{item}</span>)}</div></div>
-          <div><h3>Evidence gaps</h3>{analysis.gaps.length ? <ul className="clean-list">{interview.resume_analysis.gaps.map(item => <li key={item}>{item}</li>)}</ul> : <p className="muted">No material gaps flagged.</p>}</div>
+          <div><h3>Evidence gaps</h3>{analysis.gaps.length ? <ul className="clean-list">{analysis.gaps.map(item => <li key={item}>{item}</li>)}</ul> : <p className="muted">No material gaps flagged.</p>}</div>
         </div>
       </section>
       {technical ? <ScoreBlock score={technical} /> : <div className="panel section">Technical scorecard pending.</div>}
