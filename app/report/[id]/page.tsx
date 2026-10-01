@@ -14,7 +14,7 @@ function ScoreBlock({ score }: { score: Scorecard }) {
         <div><span className="tag">{score.round === "technical" ? "Technical" : "HR / Behavioral"}</span><h2>{score.overall.toFixed(1)} / 5</h2></div>
         <span className="muted tiny">Evidence-based coaching</span>
       </div>
-      <div className="score-grid">{score.dimensions.map(dimension => <div className="kpi" key={dimension.name}><strong>{dimension.name}</strong><div className="score-number">{dimension.score.toFixed(1)}</div><p>{dimension.feedback}</p><span className="tiny muted">Evidence: {dimension.evidence}</span></div>)}</div>
+      <div className="score-grid">{score.questions.map(question => <div className="kpi" key={question.questionNumber}><strong>Q{question.questionNumber}</strong><div className="score-number">{question.score.toFixed(1)}</div><p>{question.question}</p><span className="tiny muted">Evidence: {question.evidence}</span><p>{question.feedback}</p></div>)}</div><div className="score-grid">{score.dimensions.map(dimension => <div className="kpi" key={dimension.name}><strong>{dimension.name}</strong><div className="score-number">{dimension.score.toFixed(1)}</div><p>{dimension.feedback}</p><span className="tiny muted">Evidence: {dimension.evidence}</span></div>)}</div>
       <div className="grid-2 section">
         <div><h3>Strengths</h3><ul className="clean-list">{score.strengths.map(item => <li key={item}>{item}</li>)}</ul></div>
         <div><h3>Gaps</h3><ul className="clean-list">{score.gaps.map(item => <li key={item}>{item}</li>)}</ul></div>
