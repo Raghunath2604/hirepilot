@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AuthBar } from "@/components/AuthBar";
-import { InterviewRoom } from "@/components/InterviewRoom";
+import { InterviewRoom, type InterviewData } from "@/components/InterviewRoom";
 import { getUser } from "@/lib/auth";
 import { getInterview } from "@/lib/db";
 
@@ -20,7 +20,7 @@ export default async function InterviewPage({ params }: { params: Promise<{ id: 
         <div className="brand"><div className="logo" aria-hidden="true">HP</div><div><strong>HirePilot AI</strong><div className="muted tiny">Protected voice interview room</div></div></div>
         <div className="actions"><Link className="button ghost" href="/dashboard">Dashboard</Link><AuthBar /></div>
       </header>
-      <InterviewRoom interview={interview as never} />
+      <InterviewRoom interview={interview as InterviewData} />
     </main>
   );
 }
