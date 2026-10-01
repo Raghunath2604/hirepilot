@@ -1,0 +1,42 @@
+name: Production Realtime Smoke Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  openai-realtime:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify OpenAI Realtime client secret
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_REALTIME_MODEL: ${{ vars.OPENAI_REALTIME_MODEL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is missing from the production GitHub Environment."
+            exit 1
+          fi
+          MODEL="${OPENAI_REALTIME_MODEL:-gpt-realtime-2.1}"
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
+            https://api.openai.com/v1/realtime/client_secrets \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -H "OpenAI-Safety-Identifier: hirepilot-ci-smoke" \
+            -d "{\"session\":{\"type\":\"realtime\",\"model\":\"$MODEL\",\"audio\":{\"output\":{\"voice\":\"marin\"}}}}")
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          STATUS=$(echo "$RESPONSE" | tail -n 1)
+          if [ "$STATUS" != "200" ]; then
+            echo "OpenAI Realtime client-secret smoke test failed with HTTP $STATUS"
+            echo "$BODY" | head -c 500
+            exit 1
+          fi
+          echo "$BODY" | python -c 'import json,sys; d=json.load(sys.stdin); assert isinstance(d.get("value"), str) or isinstance(d.get("client_secret"), dict), "No ephemeral client secret returned"'
+          echo "OpenAI Realtime client-secret smoke test passed."
