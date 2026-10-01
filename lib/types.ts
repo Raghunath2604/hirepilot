@@ -12,11 +12,25 @@ export type ResumeAnalysis = {
   interviewFocus: string[];
 };
 
-export type TranscriptItem = { id: string; role: "user" | "assistant"; text: string; at: number };
+export type TranscriptItem = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  at: number;
+};
+
+export type ScorecardQuestion = {
+  questionNumber: number;
+  question: string;
+  score: number;
+  evidence: string;
+  feedback: string;
+};
 
 export type Scorecard = {
   round: InterviewRound;
   overall: number;
+  questions: ScorecardQuestion[];
   dimensions: Array<{ name: string; score: number; evidence: string; feedback: string }>;
   strengths: string[];
   gaps: string[];
