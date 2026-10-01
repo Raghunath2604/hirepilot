@@ -1,0 +1,1 @@
+export default function NotFound() { return <main className="center-page"><div className="panel"><h1>Interview not found</h1><p className="muted">The room may have expired or you may not have access to it.</p><a className="button primary" href="/">Back to HirePilot</a></div></main>; }
