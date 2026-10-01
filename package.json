@@ -2,13 +2,16 @@
   "name": "hirepilot-ai",
   "version": "2.1.0",
   "private": true,
-  "engines": { "node": ">=22.0.0" },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "contract-test": "node scripts/verify-architecture.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "latest",
