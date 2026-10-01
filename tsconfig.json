@@ -7,6 +7,10 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": { "@/*": ["./*"] },
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "plugins": [{ "name": "next" }]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"]

@@ -8,15 +8,6 @@ export function getOpenAI() {
   client ??= new OpenAI({ apiKey: key });
   return client;
 }
-
-export function analysisModel() {
-  return process.env["OPENAI_" + "ANALYSIS_MODEL"] || "gpt-6-astra";
-}
-
-export function realtimeModel() {
-  return process.env["OPENAI_" + "REALTIME_MODEL"] || "gpt-realtime-2.1";
-}
-
-export function transcribeModel() {
-  return process.env["OPENAI_" + "TRANSCRIBE_MODEL"] || "gpt-4o-mini-transcribe";
-}
+export function analysisModel() { return process.env["OPENAI_" + "ANALYSIS_MODEL"] || "gpt-5.6-terra"; }
+export function realtimeModel() { return process.env["OPENAI_" + "REALTIME_MODEL"] || "gpt-realtime-2.1"; }
+export function transcribeModel() { return process.env["OPENAI_" + "TRANSCRIBE_MODEL"] || "gpt-4o-mini-transcribe"; }
