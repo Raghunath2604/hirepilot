@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
   try {
     const user = await requireUser();
-    const limit = await enforceRateLimit(\`\${user.id}:realtime-token\`, 12, 60);
+    const limit = await enforceRateLimit(`${user.id}:realtime-token`, 12, 60);
     if (!limit.success) return NextResponse.json({ error: "Too many voice sessions. Try again shortly." }, { status: 429 });
 
     const body = await req.json();
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
       method: "POST",
       headers: {
-        Authorization: \`Bearer \${apiKey}\`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "OpenAI-Safety-Identifier": stableSafetyIdentifier(user.id),
       },
