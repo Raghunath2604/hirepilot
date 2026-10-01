@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { InterviewRound, ResumeAnalysis, Scorecard, TranscriptItem } from "@/lib/types";
 
-type InterviewData = {
+export type InterviewData = {
   id: string;
   role_title: string;
   job_description: string;
