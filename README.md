@@ -64,3 +64,12 @@ Set the same secrets in the deployment platform's secret manager. Configure the 
 ## Security
 
 See SECURITY.md.
+
+
+## Voice architecture
+
+The browser authenticates to HirePilot, requests a short-lived Realtime client secret from `/api/realtime-token`, then connects directly to OpenAI's `/v1/realtime/calls` endpoint using WebRTC. The session uses GPT-Realtime-2.1 with semantic VAD and the `marin` voice. The permanent OpenAI API key never reaches the browser.
+
+## Production smoke test
+
+GitHub Actions includes a manual `Production Realtime Smoke Test` workflow. Run it from the Actions tab with the `production` Environment selected to verify that `OPENAI_API_KEY` can mint a Realtime client secret without printing the credential.

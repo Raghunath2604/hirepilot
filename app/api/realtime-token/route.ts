@@ -8,28 +8,34 @@ import { isSameOrigin, stableSafetyIdentifier } from "@/lib/security";
 import { roundSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   try {
     const user = await requireUser();
-    const limit = await enforceRateLimit(`${user.id}:realtime`, 12, 60);
+    const limit = await enforceRateLimit(`${user.id}:realtime-token`, 12, 60);
     if (!limit.success) return NextResponse.json({ error: "Too many voice sessions. Try again shortly." }, { status: 429 });
 
-    const form = await req.formData();
-    const interviewId = String(form.get("interviewId") || "");
-    const round = roundSchema.parse(String(form.get("round") || ""));
-    const sdp = String(form.get("sdp") || "");
-    if (!/^[0-9a-f-]{36}$/i.test(interviewId) || sdp.length < 100) {
-      return NextResponse.json({ error: "Invalid voice request." }, { status: 400 });
+    const body = await req.json();
+    const interviewId = String(body?.interviewId || "");
+    const round = roundSchema.parse(body?.round);
+
+    if (!/^[0-9a-f-]{36}$/i.test(interviewId)) {
+      return NextResponse.json({ error: "Invalid interview ID." }, { status: 400 });
     }
 
     const interview = await getInterview(interviewId, user.id);
     if (!interview) return NextResponse.json({ error: "Interview not found." }, { status: 404 });
-    if ((round === "technical" && interview.status !== "technical") || (round === "hr" && interview.status !== "hr")) {
+
+    const activeStatus = round === "technical" ? "technical" : "hr";
+    if (interview.status !== activeStatus) {
       return NextResponse.json({ error: "Round is not active." }, { status: 409 });
     }
+
+    const apiKey = process.env["OPENAI_" + "API_KEY"];
+    if (!apiKey) return NextResponse.json({ error: "Voice service is not configured." }, { status: 503 });
 
     const session = {
       type: "realtime",
@@ -45,14 +51,16 @@ export async function POST(req: Request) {
         input: {
           transcription: { model: transcribeModel() },
           turn_detection: {
-            type: "server_vad",
+            type: "semantic_vad",
+            eagerness: "auto",
             create_response: true,
             interrupt_response: true,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 650,
           },
         },
-        output: { voice: "marin", speed: 1.0 },
+        output: {
+          voice: "marin",
+          speed: 1.0,
+        },
       },
       metadata: {
         hirepilot_interview_id: interviewId,
@@ -61,28 +69,30 @@ export async function POST(req: Request) {
       },
     };
 
-    const formBody = new FormData();
-    formBody.append("sdp", new Blob([sdp], { type: "application/sdp" }));
-    formBody.append("session", new Blob([JSON.stringify(session)], { type: "application/json" }));
-
-    const response = await fetch("https://api.openai.com/v1/realtime/calls", {
+    const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env["OPENAI_" + "API_KEY"] || ""}`,
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
         "OpenAI-Safety-Identifier": stableSafetyIdentifier(user.id),
       },
-      body: formBody,
+      body: JSON.stringify({ session }),
       cache: "no-store",
     });
-    if (!response.ok) return NextResponse.json({ error: "Unable to establish the voice session." }, { status: 502 });
 
-    return new Response(await response.text(), {
-      status: 201,
-      headers: { "Content-Type": "application/sdp", "Cache-Control": "no-store" },
-    });
+    if (!response.ok) return NextResponse.json({ error: "Unable to create the voice session." }, { status: 502 });
+
+    const data = await response.json() as { value?: string; client_secret?: { value?: string } };
+    const clientSecret = data.value || data.client_secret?.value;
+    if (!clientSecret) return NextResponse.json({ error: "Voice service returned no session credential." }, { status: 502 });
+
+    return NextResponse.json(
+      { value: clientSecret, model: realtimeModel(), expires_in_seconds: 60 },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message === "UNAUTHORIZED") return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-    return NextResponse.json({ error: "Unable to establish the voice session." }, { status: 400 });
+    return NextResponse.json({ error: "Unable to create the voice session." }, { status: 400 });
   }
 }

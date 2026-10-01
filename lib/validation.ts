@@ -9,13 +9,25 @@ export const interviewCreateSchema = z.object({
   analysis: z.object({
     role: z.string(),
     summary: z.string(),
-    resumeItems: z.array(z.object({ item: z.string(), relevantKeywords: z.array(z.string()), evidence: z.string() })),
-    atsKeywords: z.array(z.object({ keyword: z.string(), importance: z.enum(["critical", "high", "medium"]), evidence: z.string() })),
+    resumeItems: z.array(z.object({
+      item: z.string(),
+      relevantKeywords: z.array(z.string()),
+      evidence: z.string(),
+    })),
+    atsKeywords: z.array(z.object({
+      keyword: z.string(),
+      importance: z.enum(["critical", "high", "medium"]),
+      evidence: z.string(),
+    })),
     matchedSkills: z.array(z.string()),
     gaps: z.array(z.string()),
-    projects: z.array(z.object({ name: z.string(), relevantKeywords: z.array(z.string()), evidence: z.string() })),
-    interviewFocus: z.array(z.string())
-  })
+    projects: z.array(z.object({
+      name: z.string(),
+      relevantKeywords: z.array(z.string()),
+      evidence: z.string(),
+    })),
+    interviewFocus: z.array(z.string()),
+  }),
 });
 
 export const scoreSchemaInput = z.object({
@@ -25,6 +37,6 @@ export const scoreSchemaInput = z.object({
     id: z.string().min(1).max(120),
     role: z.enum(["user", "assistant"]),
     text: z.string().trim().min(1).max(12000),
-    at: z.number().int().nonnegative()
-  })).max(600)
+    at: z.number().int().nonnegative(),
+  })).min(2).max(600),
 });

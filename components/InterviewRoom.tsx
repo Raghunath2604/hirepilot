@@ -149,6 +149,17 @@ export function InterviewRoom({ interview }: Props) {
       const roundPayload = await roundResponse.json().catch(() => ({}));
       if (!roundResponse.ok) throw new Error(roundPayload.error || "Unable to start the round.");
 
+      const tokenResponse = await fetch("/api/realtime-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interviewId: interview.id, round }),
+        cache: "no-store",
+      });
+      const tokenPayload = await tokenResponse.json().catch(() => ({}));
+      if (!tokenResponse.ok || typeof tokenPayload.value !== "string") {
+        throw new Error(tokenPayload.error || "Unable to create the secure voice session.");
+      }
+
       await stopSession();
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -184,11 +195,14 @@ export function InterviewRoom({ interview }: Props) {
       const sdp = pc.localDescription?.sdp;
       if (!sdp) throw new Error("Could not create the browser voice offer.");
 
-      const form = new FormData();
-      form.append("interviewId", interview.id);
-      form.append("round", round);
-      form.append("sdp", sdp);
-      const response = await fetch("/api/realtime", { method: "POST", body: form });
+      const response = await fetch("https://api.openai.com/v1/realtime/calls", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${tokenPayload.value}`,
+          "Content-Type": "application/sdp",
+        },
+        body: sdp,
+      });
       const answer = await response.text();
       if (!response.ok) throw new Error("The protected voice session could not be established.");
 
