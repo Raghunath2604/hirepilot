@@ -236,7 +236,7 @@ export function InterviewRoom({ interview }: Props) {
 
           <div className="round-tabs">
             <button className={round === "technical" ? "tab active" : "tab"} onClick={() => selectRound("technical")} disabled={state !== "idle" && state !== "complete"}>Technical</button>
-            <button className={round === "hr" ? "tab active" : "tab"} onClick={() => selectRound("hr")} disabled={state !== "idle" && state !== "complete"}>HR / Behavioral</button>
+            <button className={round === "hr" ? "tab active" : "tab"} onClick={() => selectRound("hr")} disabled={!interview.scorecards?.some(item => item.round === "technical") || (state !== "idle" && state !== "complete")}>HR / Behavioral</button>
           </div>
 
           <div className="voice">
