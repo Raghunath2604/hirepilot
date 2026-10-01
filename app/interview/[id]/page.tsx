@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type InterviewRound = "technical" | "hr";
 type TranscriptItem = { id: string; role: "user" | "assistant"; text: string; at: number };
@@ -37,6 +37,7 @@ export default function InterviewPage() {
   const [scoring, setScoring] = useState(false);
   const [scoreResult, setScoreResult] = useState<{ overall: number } | null>(null);
   const [muted, setMuted] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RTCDataChannel | null>(null);
@@ -45,30 +46,29 @@ export default function InterviewPage() {
 
   const id = String(params.id || "");
 
-  const loadInterview = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch(`/api/interviews/${id}`);
-      const data = (await response.json()) as { interview?: InterviewRecord; error?: string };
-      if (!response.ok || !data.interview) throw new Error(data.error || "Unable to load interview");
-      setInterview(data.interview);
-
-      const defaultRound = data.interview.scorecards?.some((entry) => entry.round === "technical") ? "hr" : "technical";
-      if (!searchParams.get("round")) setRound(defaultRound);
-
-      const existingRound = data.interview.interview_rounds?.find((entry) => entry.round === round);
-      if (existingRound?.transcript?.length) setTranscript(existingRound.transcript);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected error");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, round, searchParams]);
-
   useEffect(() => {
-    void loadInterview();
-  }, [loadInterview]);
+    let active = true;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/interviews/${id}`);
+        const data = (await response.json()) as { interview?: InterviewRecord; error?: string };
+        if (!response.ok || !data.interview) throw new Error(data.error || "Unable to load interview");
+        if (!active) return;
+        setInterview(data.interview);
+        const defaultRound = data.interview.scorecards?.some((entry) => entry.round === "technical") ? "hr" : "technical";
+        if (!searchParams.get("round")) setRound(defaultRound);
+        const existingRound = data.interview.interview_rounds?.find((entry) => entry.round === round);
+        if (existingRound?.transcript?.length) setTranscript(existingRound.transcript);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : "Unexpected error");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [id, round, searchParams, refreshToken]);
 
   useEffect(
     () => () => {
@@ -231,7 +231,7 @@ export default function InterviewPage() {
       const data = (await response.json()) as { score?: { overall: number }; error?: string };
       if (!response.ok || !data.score) throw new Error(data.error || "Scoring failed");
       setScoreResult(data.score);
-      await loadInterview();
+      setRefreshToken((value) => value + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected scoring error");
     } finally {

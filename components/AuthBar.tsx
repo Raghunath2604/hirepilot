@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 
 export function AuthBar() {
@@ -8,8 +9,8 @@ export function AuthBar() {
   const [message,setMessage]=useState("");
   useEffect(()=>{
     const supabase=getSupabaseBrowser(); if(!supabase)return;
-    supabase.auth.getUser().then(({data})=>setUser(data.user?.email??null));
-    const {data:listener}=supabase.auth.onAuthStateChange((_event,session)=>setUser(session?.user?.email??null));
+    supabase.auth.getUser().then(({data}:{data:{user:Session["user"]|null}})=>setUser(data.user?.email??null));
+    const {data:listener}=supabase.auth.onAuthStateChange((_event:AuthChangeEvent,session:Session|null)=>setUser(session?.user?.email??null));
     return ()=>listener.subscription.unsubscribe();
   },[]);
   async function login(){
