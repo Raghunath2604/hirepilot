@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AuthBar } from "@/components/AuthBar";
 import { getUser } from "@/lib/auth";
 import { getInterview } from "@/lib/db";
-import type { Scorecard } from "@/lib/types";
+import type { ResumeAnalysis, Scorecard } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +31,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const interview = await getInterview(id, user.id);
   if (!interview) notFound();
 
+  const analysis = interview.resume_analysis as ResumeAnalysis;
   const scorecards = (interview.scorecards ?? []) as Array<{ round: "technical" | "hr"; scorecard: Scorecard }>;
   const technical = scorecards.find(item => item.round === "technical")?.scorecard;
   const hr = scorecards.find(item => item.round === "hr")?.scorecard;
@@ -44,11 +45,11 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       <section className="panel">
         <span className="tag">Senior recruiter brief</span>
         <h2>ATS keywords and evidence</h2>
-        <p>{interview.resume_analysis.summary}</p>
-        <div className="chips">{interview.resume_analysis.atsKeywords.map(item => <span className="chip" key={item.keyword}>{item.keyword} • {item.importance}</span>)}</div>
+        <p>{analysis.summary}</p>
+        <div className="chips">{analysis.atsKeywords.map(item => <span className="chip" key={item.keyword}>{item.keyword} • {item.importance}</span>)}</div>
         <div className="grid-2 section">
-          <div><h3>Matched skills</h3><div className="chips">{interview.resume_analysis.matchedSkills.map(item => <span className="chip" key={item}>{item}</span>)}</div></div>
-          <div><h3>Evidence gaps</h3>{interview.resume_analysis.gaps.length ? <ul className="clean-list">{interview.resume_analysis.gaps.map(item => <li key={item}>{item}</li>)}</ul> : <p className="muted">No material gaps flagged.</p>}</div>
+          <div><h3>Matched skills</h3><div className="chips">{analysis.matchedSkills.map(item => <span className="chip" key={item}>{item}</span>)}</div></div>
+          <div><h3>Evidence gaps</h3>{analysis.gaps.length ? <ul className="clean-list">{interview.resume_analysis.gaps.map(item => <li key={item}>{item}</li>)}</ul> : <p className="muted">No material gaps flagged.</p>}</div>
         </div>
       </section>
       {technical ? <ScoreBlock score={technical} /> : <div className="panel section">Technical scorecard pending.</div>}
