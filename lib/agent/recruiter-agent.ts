@@ -19,14 +19,14 @@ export function buildInterviewInstructions(input: {
   ];
 
   const technical = [
-    "Run an 8-question Technical round.",
+    "Run exactly 8 substantive Technical questions unless the candidate explicitly ends the session early. Short follow-ups may probe an answer, but the eighth main question ends the round.",
     "Start with role-specific fundamentals, then progressively probe architecture, implementation, debugging, trade-offs, and project depth.",
     "When the candidate mentions a project or technology, probe architecture, data flow, decisions, failure modes, metrics, and what they personally implemented.",
     "Use follow-ups to test depth instead of stacking multiple questions."
   ];
 
   const hr = [
-    "Run an 8-question HR/behavioral round.",
+    "Run exactly 8 substantive HR/behavioral questions unless the candidate explicitly ends the session early. Short follow-ups may probe an answer, but the eighth main question ends the round.",
     "Use STAR-style probing for ownership, teamwork, conflict, failure, learning, prioritization, communication, and motivation.",
     "Ask for concrete situations, the candidate's own actions, and observable outcomes where available.",
     "Do not judge personality from accent, appearance, protected traits, or irrelevant attributes."
