@@ -7,7 +7,10 @@ const memory = new Map<string, any>();
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env["SUPABASE_" + "SERVICE_ROLE_KEY"] || process.env["SUPABASE_" + "SECRET_KEY"];
-  if (!url || !key) return null;
+  if (!url || !key) {
+    if (process.env.NODE_ENV === "production") throw new Error("DATABASE_CONFIG");
+    return null;
+  }
   admin ??= createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   return admin;
 }
@@ -17,7 +20,7 @@ export async function createInterview(input: { userId: string; role: string; jd:
   const row = {
     id, user_id: input.userId, role_title: input.role, job_description: input.jd,
     resume_text: `Uploaded resume: ${input.resumeFileName}`, resume_analysis: input.analysis,
-    status: "created", created_at: new Date().toISOString()
+    status: "created", created_at: new Date().toISOString(),
   };
   const db = getAdmin();
   if (!db) { memory.set(id, row); return row; }
@@ -52,7 +55,7 @@ export async function saveTranscript(id: string, userId: string, round: Intervie
   const interview = await getInterview(id, userId);
   if (!interview) throw new Error("NOT_FOUND");
   const { error } = await db.from("interview_rounds").upsert({
-    interview_id: id, round, transcript, ended_at: new Date().toISOString()
+    interview_id: id, round, transcript, ended_at: new Date().toISOString(),
   }, { onConflict: "interview_id,round" });
   if (error) throw new Error(error.message);
 }
@@ -67,11 +70,10 @@ export async function startRound(id: string, userId: string, round: InterviewRou
   if (!interview) throw new Error("NOT_FOUND");
   if (round === "hr" && !(interview.scorecards ?? []).some((x: any) => x.round === "technical")) throw new Error("TECHNICAL_ROUND_REQUIRED");
   const { error: roundError } = await db.from("interview_rounds").upsert({
-    interview_id: id, round, transcript: [], started_at: new Date().toISOString()
+    interview_id: id, round, transcript: [], started_at: new Date().toISOString(),
   }, { onConflict: "interview_id,round" });
   if (roundError) throw new Error(roundError.message);
-  const status = round === "technical" ? "technical" : "hr";
-  const { error } = await db.from("interviews").update({ status }).eq("id", id).eq("user_id", userId);
+  const { error } = await db.from("interviews").update({ status: round === "technical" ? "technical" : "hr" }).eq("id", id).eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
 
@@ -85,8 +87,7 @@ export async function saveScore(id: string, userId: string, round: InterviewRoun
   if (!interview) throw new Error("NOT_FOUND");
   const { error } = await db.from("scorecards").upsert({ interview_id: id, round, scorecard }, { onConflict: "interview_id,round" });
   if (error) throw new Error(error.message);
-  const status = round === "technical" ? "technical_complete" : "completed";
-  const { error: statusError } = await db.from("interviews").update({ status }).eq("id", id).eq("user_id", userId);
+  const { error: statusError } = await db.from("interviews").update({ status: round === "technical" ? "technical_complete" : "completed" }).eq("id", id).eq("user_id", userId);
   if (statusError) throw new Error(statusError.message);
 }
 
