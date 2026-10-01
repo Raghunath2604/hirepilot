@@ -67,7 +67,10 @@ export async function POST(req: Request) {
 
     const response = await fetch("https://api.openai.com/v1/realtime/calls", {
       method: "POST",
-      headers: { Authorization: `Bearer ${process.env["OPENAI_" + "API_KEY"] || ""}` },
+      headers: {
+        Authorization: `Bearer ${process.env["OPENAI_" + "API_KEY"] || ""}`,
+        "OpenAI-Safety-Identifier": stableSafetyIdentifier(user.id),
+      },
       body: formBody,
       cache: "no-store",
     });
