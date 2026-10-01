@@ -11,3 +11,9 @@ export function safeCompareSecret(received: string | null, expected: string | un
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+export function isSameOrigin(req: Request) {
+  const origin = req.headers.get("origin");
+  if (!origin) return true;
+  try { return origin === new URL(req.url).origin; } catch { return false; }
+}

@@ -1,7 +1,8 @@
 {
   "name": "hirepilot-ai",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
+  "engines": { "node": ">=22.0.0" },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,6 +13,8 @@
   "dependencies": {
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "@upstash/ratelimit": "latest",
+    "@upstash/redis": "latest",
     "next": "latest",
     "openai": "latest",
     "react": "latest",
