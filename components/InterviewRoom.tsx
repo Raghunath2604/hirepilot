@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { InterviewRound, ResumeAnalysis, Scorecard, TranscriptItem } from "@/lib/types";
 
@@ -18,12 +18,17 @@ type Props = { interview: InterviewData };
 type State = "idle" | "connecting" | "listening" | "speaking" | "finishing" | "complete" | "error";
 
 export function InterviewRoom({ interview }: Props) {
-  const [round, setRound] = useState<InterviewRound>(interview.status === "hr" ? "hr" : "technical");
-  const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
+  const initialRound: InterviewRound = interview.status === "hr" ? "hr" : "technical";
+  const [round, setRound] = useState<InterviewRound>(initialRound);
+  const [transcript, setTranscript] = useState<TranscriptItem[]>(
+    () => interview.interview_rounds?.find(item => item.round === initialRound)?.transcript ?? [],
+  );
   const [state, setState] = useState<State>("idle");
   const [muted, setMuted] = useState(false);
   const [error, setError] = useState("");
-  const [score, setScore] = useState<Scorecard | null>(null);
+  const [score, setScore] = useState<Scorecard | null>(
+    () => interview.scorecards?.find(item => item.round === initialRound)?.scorecard ?? null,
+  );
   const [showBrief, setShowBrief] = useState(true);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -32,18 +37,6 @@ export function InterviewRoom({ interview }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const draftsRef = useRef(new Map<string, string>());
-
-  const savedTranscript = useMemo(
-    () => interview.interview_rounds?.find(item => item.round === round)?.transcript ?? [],
-    [interview.interview_rounds, round],
-  );
-
-  useEffect(() => {
-    setTranscript(savedTranscript);
-    setScore(interview.scorecards?.find(item => item.round === round)?.scorecard ?? null);
-    setError("");
-    setState("idle");
-  }, [savedTranscript, interview.scorecards, round]);
 
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
@@ -54,6 +47,18 @@ export function InterviewRoom({ interview }: Props) {
     pcRef.current?.close();
     streamRef.current?.getTracks().forEach(track => track.stop());
   }, []);
+
+  function selectRound(nextRound: InterviewRound) {
+    if (state !== "idle" && state !== "complete") return;
+    const nextTranscript = interview.interview_rounds?.find(item => item.round === nextRound)?.transcript ?? [];
+    const nextScore = interview.scorecards?.find(item => item.round === nextRound)?.scorecard ?? null;
+    setRound(nextRound);
+    setTranscript(nextTranscript);
+    setScore(nextScore);
+    setError("");
+    setState("idle");
+    setMuted(false);
+  }
 
   function upsert(item: TranscriptItem) {
     setTranscript(current => {
@@ -230,8 +235,8 @@ export function InterviewRoom({ interview }: Props) {
           </div>
 
           <div className="round-tabs">
-            <button className={round === "technical" ? "tab active" : "tab"} onClick={() => state === "idle" && setRound("technical")} disabled={state !== "idle" && state !== "complete"}>Technical</button>
-            <button className={round === "hr" ? "tab active" : "tab"} onClick={() => state === "idle" && setRound("hr")} disabled={state !== "idle" && state !== "complete"}>HR / Behavioral</button>
+            <button className={round === "technical" ? "tab active" : "tab"} onClick={() => selectRound("technical")} disabled={state !== "idle" && state !== "complete"}>Technical</button>
+            <button className={round === "hr" ? "tab active" : "tab"} onClick={() => selectRound("hr")} disabled={state !== "idle" && state !== "complete"}>HR / Behavioral</button>
           </div>
 
           <div className="voice">
@@ -265,7 +270,7 @@ export function InterviewRoom({ interview }: Props) {
               <p className="muted tiny">Coaching feedback derived from the transcript only.</p>
               <div className="actions">
                 {round === "technical"
-                  ? <button className="button primary" onClick={() => { setRound("hr"); setState("idle"); }}>Continue to HR / Behavioral</button>
+                  ? <button className="button primary" onClick={() => selectRound("hr")}>Continue to HR / Behavioral</button>
                   : <Link className="button primary" href={`/report/${interview.id}`}>View final report</Link>}
               </div>
             </div>
