@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getInterview } from "@/lib/db";
-import { getOpenAI, realtimeModel, transcribeModel } from "@/lib/openai";
+import { realtimeModel, transcribeModel } from "@/lib/openai";
 import { buildInterviewInstructions } from "@/lib/agent/recruiter-agent";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { isSameOrigin, stableSafetyIdentifier } from "@/lib/security";
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       output_modalities: ["audio"],
       audio: {
         input: {
-          transcription: { model: transcribeModel(), language: "en" },
+          transcription: { model: transcribeModel() },
           turn_detection: {
             type: "server_vad",
             create_response: true,
