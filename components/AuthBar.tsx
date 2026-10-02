@@ -18,7 +18,7 @@ export function AuthBar() {
   async function login(){
     setMessage("");
     const clean=email.trim();
-    if(!/^[^s@]+@[^s@]+.[^s@]+$/.test(clean)){setMessage("Enter a valid email.");return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)){setMessage("Enter a valid email.");return;}
     const response=await fetch("/api/auth/request-link",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:clean})});
     const payload=await response.json().catch(()=>({}));
     setMessage(response.ok?"Check your email for the sign-in link.":payload.error||"Authentication error.");
