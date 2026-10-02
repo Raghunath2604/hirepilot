@@ -5,7 +5,7 @@ import { getOpenAI, analysisModel } from "@/lib/openai";
 import { scoreInstructions, scoreSchema } from "@/lib/prompts";
 import { scoreSchemaInput } from "@/lib/validation";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { isSameOrigin } from "@/lib/security";
+import { isSameOrigin, stableSafetyIdentifier } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     const response = await getOpenAI().responses.create({
       model: analysisModel(),
       store: false,
+      safety_identifier: stableSafetyIdentifier(user.id),
       instructions: scoreInstructions(body.round),
       input: `Role: ${interview.role_title}\nResume analysis: ${JSON.stringify(interview.resume_analysis)}\nTranscript:\n${transcript}`,
       text: { format: { type: "json_schema", name: "scorecard", strict: true, schema: scoreSchema } },
