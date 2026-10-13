@@ -67,11 +67,22 @@ jobs:
           done
           test -s /tmp/session.json
 
-      - name: Run headed Chromium voice E2E
+      - name: Run headed Chromium microphone/WebRTC probe
+        env:
+          VOICE_WAV_PATH: /tmp/hirepilot-voice-with-silence.wav
+        run: |
+          xvfb-run -a npx playwright test tests/e2e/microphone.spec.ts --project=chromium --workers=1
+
+      - name: Run full voice interview E2E when OpenAI key is available
+        if: env.OPENAI_API_KEY != ''
         env:
           VOICE_WAV_PATH: /tmp/hirepilot-voice-with-silence.wav
         run: |
           xvfb-run -a npx playwright test tests/e2e/voice.spec.ts --project=chromium --workers=1
+
+      - name: Report full voice E2E prerequisite
+        if: env.OPENAI_API_KEY == ''
+        run: echo "Full voice interview E2E was skipped because the GitHub production environment has no OPENAI_API_KEY. The headed Chromium microphone/WebRTC probe still runs."
 
       - name: Upload Playwright artifacts on failure
         if: failure()

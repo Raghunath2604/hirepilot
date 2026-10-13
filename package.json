@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "contract-test": "node scripts/verify-architecture.mjs",
-    "test:e2e:voice": "playwright test tests/e2e/voice.spec.ts"
+    "test:e2e:voice": "playwright test tests/e2e/voice.spec.ts",
+    "test:e2e:mic": "playwright test tests/e2e/microphone.spec.ts"
   },
   "dependencies": {
     "@supabase/ssr": "latest",
