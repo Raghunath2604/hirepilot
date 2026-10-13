@@ -1,7 +1,6 @@
 name: Real Browser Voice E2E
 
 on:
-  pull_request:
   push:
     branches: ["main"]
   workflow_dispatch:
@@ -40,18 +39,18 @@ jobs:
           sudo apt-get install -y espeak-ng
           espeak-ng -w /tmp/hirepilot-voice.wav "Hello. I am ready to discuss my MLOps engineering experience, Python services, Docker, Kubernetes, machine learning pipelines, monitoring, debugging, and deployment tradeoffs."
           python - <<'PY'
-import wave
-src = "/tmp/hirepilot-voice.wav"
-dst = "/tmp/hirepilot-voice-with-silence.wav"
-with wave.open(src, "rb") as r:
-    params = r.getparams()
-    frames = r.readframes(r.getnframes())
-silence_frames = int(params.framerate * 2)
-silence = b"\x00" * silence_frames * params.nchannels * params.sampwidth
-with wave.open(dst, "wb") as w:
-    w.setparams(params)
-    w.writeframes(silence + frames + silence)
-PY
+          import wave
+          src = "/tmp/hirepilot-voice.wav"
+          dst = "/tmp/hirepilot-voice-with-silence.wav"
+          with wave.open(src, "rb") as r:
+              params = r.getparams()
+              frames = r.readframes(r.getnframes())
+          silence_frames = int(params.framerate * 2)
+          silence = b"\x00" * silence_frames * params.nchannels * params.sampwidth
+          with wave.open(dst, "wb") as w:
+              w.setparams(params)
+              w.writeframes(silence + frames + silence)
+          PY
 
       - name: Build application
         run: npm run build
