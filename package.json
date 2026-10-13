@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "contract-test": "node scripts/verify-architecture.mjs"
+    "contract-test": "node scripts/verify-architecture.mjs",
+    "test:e2e:voice": "playwright test tests/e2e/voice.spec.ts"
   },
   "dependencies": {
     "@supabase/ssr": "latest",
@@ -25,6 +26,7 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
