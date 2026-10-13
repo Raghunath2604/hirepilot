@@ -1,22 +1,27 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-let limiter: Ratelimit | null = null;
+const limiters = new Map<string, Ratelimit>();
 const localBuckets = new Map<string, { count: number; resetAt: number }>();
 
-function getLimiter() {
+function getLimiter(limit: number, windowSeconds: number) {
   const url = process.env["UPSTASH_" + "REDIS_REST_URL"];
   const token = process.env["UPSTASH_" + "REDIS_REST_TOKEN"];
   if (!url || !token) return null;
-  if (limiter) return limiter;
+
+  const cacheKey = `${limit}:${windowSeconds}`;
+  const existing = limiters.get(cacheKey);
+  if (existing) return existing;
+
   const redis = new Redis({ url, token });
-  limiter = new Ratelimit({
+  const created = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(30, "60 s"),
+    limiter: Ratelimit.slidingWindow(limit, `${windowSeconds} s`),
     analytics: false,
-    prefix: "hirepilot",
+    prefix: `hirepilot:${cacheKey}`,
   });
-  return limiter;
+  limiters.set(cacheKey, created);
+  return created;
 }
 
 function localLimit(identifier: string, limit: number, windowSeconds: number) {
@@ -36,8 +41,10 @@ export async function enforceRateLimit(identifier: string, limit = 30, windowSec
     process.env["UPSTASH_" + "REDIS_REST_TOKEN"],
   );
   if (process.env.NODE_ENV !== "production") return { success: true, remaining: 999, degraded: !configured };
-  const distributed = getLimiter();
+
+  const distributed = getLimiter(limit, windowSeconds);
   if (!distributed) return localLimit(identifier, limit, windowSeconds);
+
   const result = await distributed.limit(identifier);
   return { success: result.success, remaining: result.remaining, degraded: false };
 }
