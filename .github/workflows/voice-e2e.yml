@@ -1,0 +1,84 @@
+name: Real Browser Voice E2E
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  voice-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_ANALYSIS_MODEL: gpt-4o
+      OPENAI_REALTIME_MODEL: gpt-realtime-2.1
+      OPENAI_TRANSCRIBE_MODEL: whisper-1
+      ALLOW_DEMO: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Create speech fixture
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y espeak-ng
+          espeak-ng -w /tmp/hirepilot-voice.wav "Hello. I am ready to discuss my MLOps engineering experience, Python services, Docker, Kubernetes, machine learning pipelines, monitoring, debugging, and deployment tradeoffs."
+          python - <<'PY'
+import wave
+src = "/tmp/hirepilot-voice.wav"
+dst = "/tmp/hirepilot-voice-with-silence.wav"
+with wave.open(src, "rb") as r:
+    params = r.getparams()
+    frames = r.readframes(r.getnframes())
+silence_frames = int(params.framerate * 2)
+silence = b"\x00" * silence_frames * params.nchannels * params.sampwidth
+with wave.open(dst, "wb") as w:
+    w.setparams(params)
+    w.writeframes(silence + frames + silence)
+PY
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start local application
+        run: |
+          nohup npm run dev -- -H 127.0.0.1 -p 3000 >/tmp/hirepilot-next.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/api/auth/session >/tmp/session.json; then
+              cat /tmp/session.json
+              break
+            fi
+            sleep 2
+          done
+          test -s /tmp/session.json
+
+      - name: Run headed Chromium voice E2E
+        env:
+          VOICE_WAV_PATH: /tmp/hirepilot-voice-with-silence.wav
+        run: |
+          xvfb-run -a npx playwright test tests/e2e/voice.spec.ts --project=chromium --workers=1
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hirepilot-voice-e2e
+          path: |
+            test-results/
+            /tmp/hirepilot-next.log
