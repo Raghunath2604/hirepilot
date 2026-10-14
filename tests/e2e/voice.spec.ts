@@ -6,7 +6,10 @@ test.describe.configure({ mode: "serial" });
 test("full voice interview flow with a real Chromium browser and fake microphone", async ({ page }, testInfo) => {
   test.setTimeout(8 * 60 * 1000);
 
-  test.skip(!process.env.OPENAI_API_KEY, "OPENAI_API_KEY is not configured in the GitHub production environment; the browser microphone probe still runs.");
+  test.skip(
+    !process.env.E2E_MOCK_AI && !process.env.OPENAI_API_KEY,
+    "Set E2E_MOCK_AI=true for the no-cost CI simulation or provide OPENAI_API_KEY for a live OpenAI run.",
+  );
 
   const browserErrors: string[] = [];
   const failedRequests: string[] = [];
