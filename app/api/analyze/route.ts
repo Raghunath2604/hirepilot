@@ -6,6 +6,7 @@ import { createInterview } from "@/lib/db";
 import type { ResumeAnalysis } from "@/lib/types";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { isSameOrigin, stableSafetyIdentifier } from "@/lib/security";
+import { e2eMockEnabled, mockResumeAnalysis } from "@/lib/e2e-mock";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -33,6 +34,12 @@ export async function POST(req: Request) {
     const safeName = file.name.replace(/[\/\u0000]/g, "_").trim().slice(0, 255) || "resume";
     const ext = safeName.toLowerCase().split(".").pop() || "";
     if (!allowed.has(ext)) return NextResponse.json({ error: "Use PDF, DOCX, TXT, or MD." }, { status: 415 });
+
+    if (e2eMockEnabled()) {
+      const analysis = mockResumeAnalysis(role);
+      const interview = await createInterview({ userId: user.id, role, jd, resumeFileName: safeName, analysis });
+      return NextResponse.json({ interviewId: interview.id, analysis });
+    }
 
     const bytes = Buffer.from(await file.arrayBuffer());
     const mime = ext === "pdf" ? "application/pdf" : ext === "docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "text/plain";
