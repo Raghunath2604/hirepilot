@@ -6,6 +6,7 @@ import { buildInterviewInstructions } from "@/lib/agent/recruiter-agent";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { isSameOrigin, stableSafetyIdentifier } from "@/lib/security";
 import { roundSchema } from "@/lib/validation";
+import { e2eMockEnabled } from "@/lib/e2e-mock";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -32,6 +33,13 @@ export async function POST(req: Request) {
     const activeStatus = round === "technical" ? "technical" : "hr";
     if (interview.status !== activeStatus) {
       return NextResponse.json({ error: "Round is not active." }, { status: 409 });
+    }
+
+    if (e2eMockEnabled()) {
+      return NextResponse.json(
+        { value: "e2e-mock-token", model: "e2e-mock", expires_in_seconds: 600 },
+        { headers: { "Cache-Control": "no-store" } },
+      );
     }
 
     const apiKey = process.env["OPENAI_" + "API_KEY"];
