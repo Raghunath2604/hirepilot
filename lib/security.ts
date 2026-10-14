@@ -15,5 +15,20 @@ export function safeCompareSecret(received: string | null, expected: string | un
 export function isSameOrigin(req: Request) {
   const origin = req.headers.get("origin");
   if (!origin) return true;
-  try { return origin === new URL(req.url).origin; } catch { return false; }
+
+  try {
+    const originUrl = new URL(origin);
+    const requestUrl = new URL(req.url);
+    const host = req.headers.get("host");
+    const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+
+    if (host) {
+      const protocol = forwardedProto || requestUrl.protocol.replace(":", "");
+      return originUrl.protocol === `${protocol}:` && originUrl.host === host;
+    }
+
+    return originUrl.origin === requestUrl.origin;
+  } catch {
+    return false;
+  }
 }
