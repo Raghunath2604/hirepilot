@@ -22,29 +22,32 @@ export function isSameOrigin(req: Request) {
     const originUrl = new URL(origin);
     const requestUrl = new URL(req.url);
 
-    if (process.env.NODE_ENV !== "production") {
-      const requestHost = requestUrl.hostname;
-      return (
-        originUrl.protocol === requestUrl.protocol &&
-        LOOPBACK_HOSTS.has(originUrl.hostname) &&
-        LOOPBACK_HOSTS.has(requestHost) &&
-        originUrl.port === requestUrl.port
-      );
+    if (originUrl.origin === requestUrl.origin) return true;
+
+    const requestPort = requestUrl.port || (requestUrl.protocol === "https:" ? "443" : "80");
+    const originPort = originUrl.port || (originUrl.protocol === "https:" ? "443" : "80");
+
+    if (
+      originUrl.protocol === requestUrl.protocol &&
+      originPort === requestPort &&
+      LOOPBACK_HOSTS.has(originUrl.hostname) &&
+      LOOPBACK_HOSTS.has(requestUrl.hostname)
+    ) {
+      return true;
     }
 
     const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
     if (configuredAppUrl) {
       const configuredOrigin = new URL(configuredAppUrl).origin;
-      return originUrl.origin === configuredOrigin;
+      if (originUrl.origin === configuredOrigin) return true;
     }
 
     const host = req.headers.get("host");
     const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
-    if (!host) return originUrl.origin === requestUrl.origin;
+    if (!host) return false;
 
     const protocol = forwardedProto || requestUrl.protocol.replace(":", "");
-    const expectedOrigin = `${protocol}://${host}`;
-    return originUrl.origin === expectedOrigin;
+    return originUrl.origin === `${protocol}://${host}`;
   } catch {
     return false;
   }
