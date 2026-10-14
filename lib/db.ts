@@ -13,8 +13,13 @@ type MemoryInterview = {
   [key: string]: unknown;
 };
 
+type HirePilotGlobal = typeof globalThis & {
+  __hirepilotMemory?: Map<string, MemoryInterview>;
+};
+
 let admin: SupabaseClient | null = null;
-const memory = new Map<string, MemoryInterview>();
+const globalState = globalThis as HirePilotGlobal;
+const memory = globalState.__hirepilotMemory ??= new Map<string, MemoryInterview>();
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
