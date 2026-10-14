@@ -24,13 +24,23 @@ export function isSameOrigin(req: Request) {
     if (!host) return false;
 
     const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    const forwardedHost = req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
     const requestUrl = new URL(req.url);
     const requestProtocol = forwardedProto || requestUrl.protocol.replace(":", "");
+    const requestHost = forwardedHost || host;
 
-    if (originUrl.origin === `${requestProtocol}://${host}`) return true;
+    if (originUrl.origin === `${requestProtocol}://${requestHost}`) return true;
 
     const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
     if (configuredAppUrl && originUrl.origin === new URL(configuredAppUrl).origin) return true;
+
+    if (
+      process.env.ALLOW_DEMO === "true" &&
+      process.env.NODE_ENV !== "production" &&
+      LOOPBACK_HOSTS.has(originUrl.hostname)
+    ) {
+      return true;
+    }
 
     if (LOOPBACK_HOSTS.has(originUrl.hostname) && originUrl.host === host) return true;
 
