@@ -32,6 +32,7 @@ export function InterviewRoom({ interview }: Props) {
   const [showBrief, setShowBrief] = useState(true);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const mockPcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<RTCDataChannel | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -44,6 +45,7 @@ export function InterviewRoom({ interview }: Props) {
 
   useEffect(() => () => {
     channelRef.current?.close();
+    mockPcRef.current?.close();
     pcRef.current?.close();
     streamRef.current?.getTracks().forEach(track => track.stop());
   }, []);
@@ -128,11 +130,66 @@ export function InterviewRoom({ interview }: Props) {
 
   async function stopSession() {
     channelRef.current?.close();
+    mockPcRef.current?.close();
     pcRef.current?.close();
     streamRef.current?.getTracks().forEach(track => track.stop());
     channelRef.current = null;
+    mockPcRef.current = null;
     pcRef.current = null;
     streamRef.current = null;
+  }
+
+  async function startMockVoice(pc: RTCPeerConnection) {
+    const remotePc = new RTCPeerConnection();
+    mockPcRef.current = remotePc;
+
+    remotePc.ontrack = event => {
+      const remoteStream = event.streams[0];
+      if (!audioRef.current || !remoteStream) return;
+      audioRef.current.srcObject = remoteStream;
+      void audioRef.current.play().catch(() => {});
+    };
+
+    remotePc.ondatachannel = event => {
+      event.channel.onopen = () => {
+        window.setTimeout(() => {
+          event.channel.send(JSON.stringify({
+            type: "response.output_audio_transcript.done",
+            item_id: "mock-question",
+            transcript: "Tell me about an MLOps system you built and the production trade-offs you made.",
+          }));
+        }, 250);
+
+        window.setTimeout(() => {
+          event.channel.send(JSON.stringify({
+            type: "conversation.item.input_audio_transcription.completed",
+            item_id: "mock-answer",
+            transcript: "I built an AI Reliability Platform for MLOps with monitoring, drift detection, retraining triggers, and deployment automation.",
+          }));
+        }, 850);
+      };
+    };
+
+    const channel = pc.createDataChannel("oai-events");
+    channelRef.current = channel;
+    channel.onopen = () => {
+      setState("listening");
+      channel.send(JSON.stringify({ type: "response.create" }));
+    };
+    channel.onmessage = message => handleEvent(message.data);
+
+    await pc.setLocalDescription(await pc.createOffer({ offerToReceiveAudio: true }));
+    await waitForIce(pc);
+    const offer = pc.localDescription;
+    if (!offer) throw new Error("Could not create the browser voice offer.");
+
+    await remotePc.setRemoteDescription(offer);
+    const answer = await remotePc.createAnswer();
+    await remotePc.setLocalDescription(answer);
+    await waitForIce(remotePc);
+    const localAnswer = remotePc.localDescription;
+    if (!localAnswer) throw new Error("Could not create the browser voice answer.");
+    await pc.setRemoteDescription(localAnswer);
   }
 
   async function startSession() {
@@ -169,9 +226,9 @@ export function InterviewRoom({ interview }: Props) {
       const pc = new RTCPeerConnection();
       pcRef.current = pc;
       pc.ontrack = event => {
-        const stream = event.streams[0];
-        if (!audioRef.current || !stream) return;
-        audioRef.current.srcObject = stream;
+        const remoteStream = event.streams[0];
+        if (!audioRef.current || !remoteStream) return;
+        audioRef.current.srcObject = remoteStream;
         void audioRef.current.play().catch(() => {});
       };
       pc.onconnectionstatechange = () => {
@@ -181,6 +238,11 @@ export function InterviewRoom({ interview }: Props) {
         }
       };
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      if (tokenPayload.value === "e2e-mock-token") {
+        await startMockVoice(pc);
+        return;
+      }
 
       const channel = pc.createDataChannel("oai-events");
       channelRef.current = channel;
