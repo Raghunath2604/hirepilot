@@ -6,6 +6,7 @@ import { scoreInstructions, scoreSchema } from "@/lib/prompts";
 import { scoreSchemaInput } from "@/lib/validation";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { isSameOrigin, stableSafetyIdentifier } from "@/lib/security";
+import { e2eMockEnabled, mockScore } from "@/lib/e2e-mock";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,6 +22,12 @@ export async function POST(req: Request) {
     const interview = await getInterview(body.interviewId, user.id);
     if (!interview) return NextResponse.json({ error: "Interview not found." }, { status: 404 });
     await saveTranscript(body.interviewId, user.id, body.round, body.transcript);
+
+    if (e2eMockEnabled()) {
+      const score = mockScore(body.round);
+      await saveScore(body.interviewId, user.id, body.round, score);
+      return NextResponse.json({ score });
+    }
 
     const transcript = body.transcript.map(x => `${x.role === "assistant" ? "INTERVIEWER" : "CANDIDATE"}: ${x.text}`).join("\n").slice(0, 100000);
     const response = await getOpenAI().responses.create({
