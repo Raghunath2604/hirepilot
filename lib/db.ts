@@ -1,6 +1,11 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { InterviewRound, ResumeAnalysis, Scorecard, TranscriptItem } from "./types";
 
+type MemoryScorecard = {
+  round: InterviewRound;
+  scorecard: Scorecard;
+};
+
 type MemoryInterview = {
   id: string;
   user_id: string;
@@ -10,6 +15,7 @@ type MemoryInterview = {
   resume_analysis: ResumeAnalysis;
   status: string;
   created_at: string;
+  scorecards: MemoryScorecard[];
   [key: string]: unknown;
 };
 
@@ -49,6 +55,7 @@ export async function createInterview(input: {
     resume_analysis: input.analysis,
     status: "created",
     created_at: new Date().toISOString(),
+    scorecards: [],
   };
   const db = getAdmin();
   if (!db) {
@@ -119,6 +126,9 @@ export async function startRound(id: string, userId: string, round: InterviewRou
   if (!db) {
     const row = memory.get(id);
     if (row?.user_id !== userId) throw new Error("NOT_FOUND");
+    if (round === "hr" && !row.scorecards.some(entry => entry.round === "technical")) {
+      throw new Error("TECHNICAL_ROUND_REQUIRED");
+    }
     row.status = round === "technical" ? "technical" : "hr";
     return row;
   }
@@ -158,6 +168,10 @@ export async function saveScore(
     const row = memory.get(id);
     if (row?.user_id !== userId) throw new Error("NOT_FOUND");
     row[`score_${round}`] = scorecard;
+    const existing = row.scorecards.findIndex(entry => entry.round === round);
+    const value = { round, scorecard };
+    if (existing >= 0) row.scorecards[existing] = value;
+    else row.scorecards.push(value);
     row.status = round === "technical" ? "technical_complete" : "completed";
     return;
   }
