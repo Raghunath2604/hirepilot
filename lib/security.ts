@@ -20,34 +20,21 @@ export function isSameOrigin(req: Request) {
 
   try {
     const originUrl = new URL(origin);
-    const requestUrl = new URL(req.url);
-
-    if (originUrl.origin === requestUrl.origin) return true;
-
-    const requestPort = requestUrl.port || (requestUrl.protocol === "https:" ? "443" : "80");
-    const originPort = originUrl.port || (originUrl.protocol === "https:" ? "443" : "80");
-
-    if (
-      originUrl.protocol === requestUrl.protocol &&
-      originPort === requestPort &&
-      LOOPBACK_HOSTS.has(originUrl.hostname) &&
-      LOOPBACK_HOSTS.has(requestUrl.hostname)
-    ) {
-      return true;
-    }
-
-    const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (configuredAppUrl) {
-      const configuredOrigin = new URL(configuredAppUrl).origin;
-      if (originUrl.origin === configuredOrigin) return true;
-    }
-
     const host = req.headers.get("host");
-    const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
     if (!host) return false;
 
-    const protocol = forwardedProto || requestUrl.protocol.replace(":", "");
-    return originUrl.origin === `${protocol}://${host}`;
+    const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    const requestUrl = new URL(req.url);
+    const requestProtocol = forwardedProto || requestUrl.protocol.replace(":", "");
+
+    if (originUrl.origin === `${requestProtocol}://${host}`) return true;
+
+    const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (configuredAppUrl && originUrl.origin === new URL(configuredAppUrl).origin) return true;
+
+    if (LOOPBACK_HOSTS.has(originUrl.hostname) && originUrl.host === host) return true;
+
+    return false;
   } catch {
     return false;
   }
