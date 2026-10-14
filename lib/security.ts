@@ -24,7 +24,19 @@ export function isSameOrigin(req: Request) {
 
     if (host) {
       const protocol = forwardedProto || requestUrl.protocol.replace(":", "");
-      return originUrl.protocol === `${protocol}:` && originUrl.host === host;
+      const expectedUrl = new URL(`${protocol}://${host}`);
+
+      if (originUrl.protocol !== expectedUrl.protocol) return false;
+      if (originUrl.host === expectedUrl.host) return true;
+
+      const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
+      const localAlias =
+        process.env.NODE_ENV !== "production" &&
+        loopbackHosts.has(originUrl.hostname) &&
+        loopbackHosts.has(expectedUrl.hostname) &&
+        originUrl.port === expectedUrl.port;
+
+      return localAlias;
     }
 
     return originUrl.origin === requestUrl.origin;
