@@ -14,7 +14,14 @@ test("full voice interview flow with a real Chromium browser and fake microphone
   const browserErrors: string[] = [];
   const failedRequests: string[] = [];
   page.on("console", message => { if (message.type() === "error") browserErrors.push(message.text()); });
-  page.on("requestfailed", request => { failedRequests.push(request.url() + " :: " + (request.failure()?.errorText || "request failed")); });
+  page.on("requestfailed", request => {
+    const failure = request.failure()?.errorText || "request failed";
+    const url = request.url();
+    // Next.js may cancel an in-flight RSC request during a client-side navigation.
+    // That browser-level abort is expected and is not an application network failure.
+    if (failure === "net::ERR_ABORTED" && url.includes("?_rsc=")) return;
+    failedRequests.push(url + " :: " + failure);
+  });
 
   const resumePath = testInfo.outputPath("resume.txt");
   await fs.writeFile(resumePath, [
